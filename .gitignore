@@ -1,0 +1,8 @@
+#Build Files
+*.o
+*.exe
+*.wasm
+*.html
+*.js
+*.a
+
