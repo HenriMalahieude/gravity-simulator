@@ -1,16 +1,17 @@
-BASE_FLAGS = -Wall -Wpedantic -I ./include/ -lraylib
-
 CC = g++
-FLAGS = $(BASE_FLAGS) -L ./lib/ -lgdi32 -lopengl32 -lwinmm -g
+FLAGS = -Wall -Wpedantic -I ./include/ -L ./lib/ -lraylib -lgdi32 -lopengl32 -lwinmm -g
 
 WEB_CC = em++
-WEB_FLAGS = $(BASE_FLAGS) -O3 -L ./web_lib/ -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB
+WEB_FLAGS = -Wall -Wpedantic -O3 -I ./include/  -L ./web_lib/ -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB
 
-dev:
-	$(CC) ../src/main.cpp -o test.exe $(FLAGS)
+FILES = ../src/Input/Input.cpp ../src/Simulator/Simulator.cpp
+OBJECTS = Input.o Simulator.o
+
+dev: $(OBJECTS)
+	$(CC) ../src/main.cpp $(OBJECTS) -o test.exe $(FLAGS)
 
 web: clean
-	$(WEB_CC) ../src/main.cpp -o index.html $(WEB_FLAGS)
+	$(WEB_CC) ../src/main.cpp $(FILES) -o index.html $(WEB_FLAGS)
 
 clean:
 	-rm *.o
@@ -18,3 +19,9 @@ clean:
 	-rm *.html
 	-rm *.js
 	-rm *.wasm
+
+Input.o: ../src/Input/Input.hpp ../src/Input/Input.cpp
+	$(CC) ../src/Input/Input.cpp -c $(FLAGS)
+
+Simulator.o: ../src/Simulator/Simulator.hpp ../src/Simulator/Simulator.cpp
+	$(CC) ../src/Simulator/Simulator.cpp -c $(FLAGS)

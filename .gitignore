@@ -6,3 +6,6 @@
 *.js
 *.a
 
+
+#Options
+.vscode

@@ -18,12 +18,4 @@ class MouseManager{
         Vector2 GetInputLocation() {return mouseLocation;}
 };
 
-bool operator==(Vector2 lhs, Vector2 rhs){
-    return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
-bool operator!=(Vector2 lhs, Vector2 rhs){
-    return !(lhs == rhs);
-}
-
 #endif

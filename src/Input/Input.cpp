@@ -1,3 +1,4 @@
+#include "../globals.hpp"
 #include "Input.hpp"
 
 MouseManager::MouseManager(){ }
