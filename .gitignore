@@ -1,11 +1,10 @@
 #Build Files
 *.o
 *.exe
-*.wasm
-*.html
-*.js
 *.a
-
+_build/*.wasm
+_build/*.html
+_build/*.js
 
 #Options
 .vscode

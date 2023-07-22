@@ -2,10 +2,10 @@ CC = g++
 FLAGS = -Wall -Wpedantic -I ./include/ -L ./lib/ -lraylib -lgdi32 -lopengl32 -lwinmm -g
 
 WEB_CC = em++
-WEB_FLAGS = -Wall -Wpedantic -O3 -I ./include/  -L ./web_lib/ -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB
+WEB_FLAGS = -Wall -Wpedantic -O3 -I ./include/  -L ./web_lib/ -lraylib -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB -sLLD_REPORT_UNDEFINED
 
 FILES = ../src/Input/Input.cpp ../src/Simulator/Simulator.cpp
-OBJECTS = Input.o Simulator.o
+OBJECTS = Simulator.o
 
 dev: $(OBJECTS)
 	$(CC) ../src/main.cpp $(OBJECTS) -o test.exe $(FLAGS)
@@ -19,9 +19,6 @@ clean:
 	-rm *.html
 	-rm *.js
 	-rm *.wasm
-
-Input.o: ../src/Input/Input.hpp ../src/Input/Input.cpp
-	$(CC) ../src/Input/Input.cpp -c $(FLAGS)
 
 Simulator.o: ../src/Simulator/Simulator.hpp ../src/Simulator/Simulator.cpp
 	$(CC) ../src/Simulator/Simulator.cpp -c $(FLAGS)
