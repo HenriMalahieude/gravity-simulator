@@ -1,10 +1,11 @@
 CC = g++
 RAYLIB_PATH = C:\Users\there\OneDrive\Documents\Projects\Raylib\raylib\src
+RAYGUI_PATH = C:\Users\there\OneDrive\Documents\Projects\Raylib\raygui\src
 
-FLAGS = -Wall -Wpedantic -I $(RAYLIB_PATH) -I ./include/ -L ./lib/ -lraylib -lgdi32 -lopengl32 -lwinmm -g
+FLAGS = -Wall -Wpedantic -I $(RAYLIB_PATH) -I $(RAYGUI_PATH) -L ./lib/ -lraylib -lgdi32 -lopengl32 -lwinmm -g
 
 WEB_CC = em++
-WEB_FLAGS = -Wall -Wpedantic -O3 -I $(RAYLIB_PATH) -I ./include/  -L ./web_lib/ -lraylib -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB -sLLD_REPORT_UNDEFINED
+WEB_FLAGS = -Wall -Wpedantic -O3 -I $(RAYLIB_PATH) -I $(RAYGUI_PATH)  -L ./web_lib/ -lraylib -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB -sLLD_REPORT_UNDEFINED
 
 FILES = ../src/Input/Input.cpp ../src/Simulator/Simulator.cpp
 OBJECTS = Simulator.o
