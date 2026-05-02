@@ -1,5 +1,6 @@
 #define RAYGUI_IMPLEMENTATION
 #include <string>
+#include <sstream>
 
 #include "raylib.h"
 #include "raygui.h"
@@ -15,18 +16,14 @@ int Debug_Scope::context = 0;
 
 int main(){
     InitWindow(window_height, window_length, "Gravity Simulator");
-    SetTargetFPS(60);
+    SetTargetFPS(target_fps);
 
     Simulator sim;
+    sim.ResetWorld();
+    //DefaultWorld(sim.world);
 
-    Object sun = Object{Vector2{window_length/2, window_height/2}, Vector2{0, 0}, 10000.f, 20.f, true, true, YELLOW};
-    Object planet = Object{Vector2{window_length/2 + 150, window_height/2}, Vector2{0, -18.5f}, 1000.f, 5.f, false, false, MAROON};
-    Object moon = Object{Vector2{planet.position.x + 15, planet.position.y}, Vector2{0, 2.f}, 10.f, 2.f, false, false, GRAY};
-    sim.AddObject(sun);
-    sim.AddObject(planet);
-    sim.AddObject(moon);
-
-    Object details = sun;
+    Object *details = &sim.world[0];
+    stringstream ss; ss.precision(2); ss << fixed;
     bool minimizeDetails = false;
 
     bool insertingObjects = false;
@@ -87,7 +84,7 @@ int main(){
             }
 
             if (insertingObjects){ //Inserting Object
-                details = Object{};
+                details = nullptr;
 
                 Rectangle pos = Rectangle{4, 0, 32, 32};
                 pos.x = (!minimizeOptions) ? 190 : 4;
@@ -99,8 +96,17 @@ int main(){
                 if (!minimizeOptions){
                     GuiGroupBox(Rectangle{0, window_height-240, 250, 240}, "Object Options");
                     GuiColorPicker(Rectangle{10, window_height-240 + 10, 120, 120}, "Object Color", &addColor);
-                    GuiSliderBar(Rectangle{10, window_height-240 + 140, 140, 20}, "", ("Mass: " + to_string(addMass)).c_str(), &addMass, 50.f, 10000.f);
-                    GuiSliderBar(Rectangle{10, window_height-240 + 170, 140, 20}, "", ("Radius: " + to_string(addRadius)).c_str(), &addRadius, 1.f, 25.f);
+
+                    ss << addMass;
+                    string massStr = "Mass: " + ss.str();
+                    GuiSliderBar(Rectangle{10, window_height-240 + 140, 140, 20}, "", massStr.c_str(), &addMass, 50.f, 10000.f);
+                    ss.str(""); ss.clear();
+
+                    ss << addRadius;
+                    string radiusStr = "Radius: " + ss.str();
+                    GuiSliderBar(Rectangle{10, window_height-240 + 170, 140, 20}, "", radiusStr.c_str(), &addRadius, 1.f, 25.f);
+                    ss.str(""); ss.clear();
+
                     GuiCheckBox(Rectangle{10, window_height-240 + 200, 20, 20}, "Anchored?", &addAnchored);
                     GuiCheckBox(Rectangle{150, window_height-240 + 200, 20, 20}, "Invincible?", &addInvincible);
                 }
@@ -125,7 +131,7 @@ int main(){
                 }else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && holding){
                     holding = false;
 
-                    Object obj = Object{addPosition, addVelocity, addMass, addRadius, addAnchored, addInvincible, addColor};
+                    Object obj = Object{addPosition, addVelocity, Vector2Zero(), addMass, addRadius, addAnchored, addInvincible, addColor};
                     bool succ = sim.AddObject(obj);
                     if (!succ){
                         //TODO
@@ -139,17 +145,45 @@ int main(){
                 GuiDrawIcon(minIcon, pos.x, pos.y, 2, BLACK);
 
                 if (!minimizeDetails){
-                    string anchored = (details.anchored) ? "true" : "false";
-                    string invincible = (details.invincible) ? "true" : "false";
+                    Object nullobj;
+                    if (details == nullptr) details = &nullobj;
+
+                    string anchored = (details->anchored) ? "true" : "false";
+                    string invincible = (details->invincible) ? "true" : "false";
 
                     GuiGroupBox(Rectangle{window_length-200, window_height-200, 200, 200}, "Object Freeze-Frame");
-                    DrawCircle(window_length - 200 + 40, window_height - 200 + 40, details.radius, details.clr);
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 70, 190, 25}, ("Mass: " + to_string(details.mass)).c_str());
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 90, 190, 25}, ("Radius: " + to_string(details.radius)).c_str());
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 110, 190, 25}, ("Velocity: (" + to_string(details.velocity.x) + ", " + to_string(details.velocity.y) + ")").c_str());
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 130, 190, 25}, ("Position: (" + to_string(details.position.x) + ", " + to_string(details.position.y) + ")").c_str());
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 150, 190, 25}, ("Anchored? " + anchored).c_str());
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 170, 190, 25}, ("Invincible? " + invincible).c_str());
+                    DrawCircle(window_length - 200 + 40, window_height - 200 + 40, details->radius, details->clr);
+
+                    ss << details->mass;
+                    string massStr = "Mass: " + ss.str();
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 70, 190, 25}, massStr.c_str());
+                    ss.str(""); ss.clear();
+                    
+                    ss << details->radius;
+                    string radiusStr = "Radius: " + ss.str();
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 90, 190, 25}, radiusStr.c_str());
+                    ss.str(""); ss.clear();
+                    
+                    ss << details->velocity.x;
+                    string velXStr = "Velocity X: " + ss.str();
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 110, 190, 25}, velXStr.c_str());
+                    ss.str(""); ss.clear();
+                    
+                    ss << details->velocity.y;
+                    string velYStr = "Velocity Y: " + ss.str();
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 130, 190, 25}, velYStr.c_str());
+                    ss.str(""); ss.clear();
+
+                    ss << details->acceleration.x;
+                    string accXStr = "Acceleration X: " + ss.str();
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 150, 190, 25}, accXStr.c_str());
+                    ss.str(""); ss.clear();
+
+                    ss << details->acceleration.y;
+                    string accYStr = "Acceleration Y: " + ss.str();
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 170, 190, 25}, accYStr.c_str());
+                    ss.str(""); ss.clear();
+                    if (details == &nullobj) details = nullptr;
                 }
 
                 int mX = GetMouseX();
@@ -200,4 +234,9 @@ Vector2 operator+(Vector2 lhs, Vector2 rhs){
 
 Vector2 operator-(Vector2 lhs, Vector2 rhs){
     return lhs + (-1 * rhs);
+}
+
+Vector2 operator+=(Vector2 &lhs, Vector2 rhs){
+    lhs = lhs + rhs;
+    return lhs;
 }

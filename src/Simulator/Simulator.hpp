@@ -12,20 +12,21 @@ struct Dot{
 
 class Simulator{
     private:
-        std::vector<Object> world = {};
         int maxObjectCount = 100;
         float gConstant = 5.f;
 
         bool predictionUpdate = true;
         std::vector<Dot> predictions = {};
     public:
+        std::vector<Object> world = {};
         float timeConstant = 1.f;
         Simulator() {}
 
         void Update(float frameTime);
 
-        Object SelectObject(int x, int y);
+        Object *SelectObject(int x, int y);
         bool AddObject(Object);
+        void ResetWorld();
         void ClearAll();
 
         void DrawPredictions(int centerIndex = -1);

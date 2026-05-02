@@ -6,6 +6,7 @@
 struct Object{
     Vector2 position = Vector2{-1, -1};
     Vector2 velocity = Vector2{-1, -1};
+    Vector2 acceleration = Vector2{-1, -1}; //dynamic programming
     float mass = 10.f;
     float radius = 1.f;
     bool anchored = false;

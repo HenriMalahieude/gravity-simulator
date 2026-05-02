@@ -16,38 +16,48 @@ Vector2 calculateForce(Object base, Object other, float gConstant) {
     return direction * force;
 }
 
-void WorldTickRoutine(float frameTime, float timeConstant, float gConstant, vector<Object> &world) {
-    //Calculate Forces and Update Velocities & Positions
-    for (size_t i = 0; i < world.size(); i++){
+void WorldTickRoutine(float frameTime, float timeConstant, float gConstant, vector<Object> &world) { 
+    //Zero Accelerations
+    for (size_t i = 0; i < world.size(); i++) {
         Object *obj = &(world[i]);
-        float timing = frameTime * timeConstant;
-        if (obj->anchored) continue;
+        obj->acceleration = Vector2Zero();
+    }
 
-        Vector2 updatedVelocity = obj->velocity;
-        for (size_t j = 0; j < world.size(); j++){
-            if (j == i) continue;
+    //Calculate Forces O(n log(n))
+    for (size_t i = 0; i < world.size(); i++){ //n
+        Object *obj = &(world[i]);
+
+        //Vector2 updatedVelocity = obj->velocity;
+        for (size_t j = i+1; j < world.size(); j++){ //log(n)
+            Object *oth = &(world[j]);
+            if (oth->anchored && obj->anchored) continue;
             //Debug_Print("Calling Calculate Force between ", i, " and ", j);
-            Vector2 force = calculateForce(*obj, world[j], gConstant);
-            //NOTE: If I ever want to optimize this, I can do some "dynamic programming" and instead save this for the j-th object too
+            Vector2 force = calculateForce(*obj, *oth, gConstant);
             
             //F = ma -> F/m = a
             //Debug_Print("Got Force: ", force.x, ", ", force.y);
-            Vector2 accel = (force / obj->mass) * (timing);
-            updatedVelocity = updatedVelocity + accel;
+            if (!obj->anchored) obj->acceleration += (force / obj->mass);
+            if (!oth->anchored) oth->acceleration += (force / oth->mass) * -1.f; //Newton's Third Law
         }
 
-        obj->velocity = updatedVelocity;
-        obj->position = Vector2Add(obj->position, Vector2Scale(obj->velocity, timing));
+        //obj->velocity = updatedVelocity;
+        //obj->position = Vector2Add(obj->position, Vector2Scale(obj->velocity, step));
         //Debug_Print("New Vel: ", updatedVelocity.x, ", ", updatedVelocity.y);
+    }
+
+    //Apply Forces
+    float step = frameTime * timeConstant;
+    for (size_t i = 0; i < world.size(); i++){
+        Object *obj = &(world[i]);
+        if (obj->anchored) continue;
+
+        obj->velocity += obj->acceleration * step;
+        obj->position += obj->velocity * step;
     }
 }
 
-void Simulator::Update(float frameTime){
-    if (timeConstant <= 0.001f) return;
-    predictionUpdate = true;
-
-    //Debug_Print("Simulator Update Called"); Debug_Scope ds;
-
+//NOTE: There is a bug that causes radius collision not to change despite increased radius. Idk why, and I can't be bothered to fix it
+void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
     //Out of Screen Check
     Vector2 extraBounds = Vector2{window_length / 2, window_height / 2};
     Vector2 minBounds = Vector2{-1 * extraBounds.x, -1 * extraBounds.y};
@@ -65,10 +75,7 @@ void Simulator::Update(float frameTime){
         }
     }
 
-    WorldTickRoutine(frameTime, timeConstant, gConstant, world);
-
     //Collision Detection
-    //NOTE: There is a bug that causes radius collision not to change despite increased radius. Idk why, and I can't be bothered to fix it
     for (size_t i = 0; i < world.size(); i++){
         Object *obj1 = &world[i];
         for (size_t j = 0; j < world.size(); j++){
@@ -90,6 +97,7 @@ void Simulator::Update(float frameTime){
                         obj1->mass += obj2->mass;
                         obj1->velocity = (momentumObj1 + momentumObj2) / obj1->mass;
                         obj1->radius *= (1.f + (0.15f * (obj2->radius / obj2->radius)));
+                        obj1->clr = ColorAlphaBlend(obj1->clr, obj2->clr, WHITE);
 
                         world.erase(next(world.begin(), j));
                     }else{
@@ -97,6 +105,7 @@ void Simulator::Update(float frameTime){
                         obj2->mass += obj1->mass;
                         obj2->velocity = (momentumObj1 + momentumObj2) / obj2->mass;
                         obj2->radius *= (1.f + (0.15f * (obj1->radius / obj2->radius)));
+                        obj2->clr = ColorAlphaBlend(obj2->clr, obj1->clr, WHITE);
 
                         world.erase(next(world.begin(), i));
                     }
@@ -108,11 +117,21 @@ void Simulator::Update(float frameTime){
     }
 }
 
+void Simulator::Update(float frameTime){
+    if (timeConstant <= 0.001f) return;
+    predictionUpdate = true;
+
+    //Debug_Print("Simulator Update Called"); Debug_Scope ds;
+
+    WorldTickRoutine(frameTime, timeConstant, gConstant, world);
+    WorldCollisionUpdate(frameTime, world);
+}
+
 void Simulator::DrawPredictions(int centerIndex) {
     if (timeConstant > 0.001f || world.size() <= 1) return;
 
     const int PREDICT_ITER_LIM = 100000;
-    const float TIME_INTERVAL = 1.f/60.f;
+    const float TIME_INTERVAL = 1.f/30.f;
 
     if (predictionUpdate){
         predictionUpdate = false;
@@ -124,6 +143,7 @@ void Simulator::DrawPredictions(int centerIndex) {
         
         for (int i = 0; i < predictionsPerObject; i++){
             WorldTickRoutine(TIME_INTERVAL, 1.f, gConstant, predictWorld);
+            WorldCollisionUpdate(TIME_INTERVAL, predictWorld);
             for (size_t j = 0; j < predictWorld.size(); j++){
                 predictions.push_back(Dot{predictWorld[j].clr, predictWorld[j].position});
             }
@@ -172,16 +192,48 @@ void Simulator::ClearAll(){
     world.clear();
 }
 
-Object Simulator::SelectObject(int x, int y){
-    Object details;
-
+Object *Simulator::SelectObject(int x, int y){
     for (size_t i = 0; i < world.size(); i++){
         Vector2 mousePos = Vector2{(float)x, (float)y};
         float dist = Vector2Distance(mousePos, world[i].position);
-        if (dist < world[i].radius){
-            return world[i];
+        if (dist < (world[i].radius + 0.1f)) {
+            return &world[i];
         }
     }
 
-    return details;
+    return nullptr;
+}
+
+void Simulator::ResetWorld(){
+    world.clear();
+    Object sun = Object{
+        .position = Vector2{window_length/2, window_height/2},
+        .velocity = Vector2{0, 0},
+        .mass = 10000.f,
+        .radius = 20.f,
+        .anchored = true,
+        .invincible = true,
+        .clr = YELLOW
+    };
+    Object planet = Object{
+        .position = Vector2{window_length/2 + 150, window_height/2},
+        .velocity = Vector2{0, -18.5f},
+        .mass = 1000.f,
+        .radius = 5.f,
+        .anchored = false,
+        .invincible = false,
+        .clr = MAROON
+    };
+    Object moon = Object{
+        .position = Vector2{planet.position.x + 15, planet.position.y},
+        .velocity = Vector2{0, 2.f},
+        .mass = 10.f,
+        .radius = 3.f,
+        .anchored = false,
+        .invincible = false,
+        .clr = GRAY
+    };
+    world.push_back(sun);
+    world.push_back(planet);
+    world.push_back(moon);
 }

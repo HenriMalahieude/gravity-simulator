@@ -6,6 +6,7 @@
 
 const int window_height = 800;
 const int window_length = 800;
+const int target_fps = 60;
 
 struct Debug_Scope{
     static int context;
@@ -32,5 +33,7 @@ Vector2 operator*(float lhs, Vector2 rhs);
 Vector2 operator+(Vector2 lhs, Vector2 rhs);
 
 Vector2 operator-(Vector2 lhs, Vector2 rhs);
+
+Vector2 operator+=(Vector2 &lhs, Vector2 rhs);
 
 #endif
