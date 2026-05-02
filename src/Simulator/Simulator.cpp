@@ -73,6 +73,13 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
             //Debug_Print("Deleted Planet");
             advance(it, -1); 
         }
+
+        if (it->mass >= Simulator::maxMass*0.75f && it->radius >= Simulator::maxRadius*0.75f){
+            it->radius = 15.f;
+            it->mass = Simulator::maxMass;
+            it->invincible = true;
+            it->clr = BLACK;
+        }
     }
 
     //Collision Detection
@@ -95,17 +102,25 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
                     if (obj1->mass > obj2->mass){ //Conservation of Momentum
                         //Debug_Print("Object 1 with ", obj1->mass, "kg wins");
                         obj1->mass += obj2->mass;
+                        obj1->mass = fminf(obj1->mass, Simulator::maxMass);
                         obj1->velocity = (momentumObj1 + momentumObj2) / obj1->mass;
-                        obj1->radius *= (1.f + (0.15f * (obj2->radius / obj2->radius)));
-                        obj1->clr = ColorAlphaBlend(obj1->clr, obj2->clr, WHITE);
+                        obj1->radius *= (1.f + (0.5f * (obj2->mass / obj1->mass)));
+                        obj1->radius = fminf(obj1->radius, Simulator::maxRadius);
+                        obj1->clr.r = (obj1->clr.r + obj2->clr.r) / 2;
+                        obj1->clr.g = (obj1->clr.g + obj2->clr.g) / 2;
+                        obj1->clr.b = (obj1->clr.b + obj2->clr.b) / 2;
 
                         world.erase(next(world.begin(), j));
                     }else{
                         //Debug_Print("Object 2 with ", obj2->mass, "kg wins");
                         obj2->mass += obj1->mass;
+                        obj2->mass = fminf(obj2->mass, Simulator::maxMass);
                         obj2->velocity = (momentumObj1 + momentumObj2) / obj2->mass;
-                        obj2->radius *= (1.f + (0.15f * (obj1->radius / obj2->radius)));
-                        obj2->clr = ColorAlphaBlend(obj2->clr, obj1->clr, WHITE);
+                        obj2->radius *= (1.f + (0.5f * (obj1->mass / obj2->mass)));
+                        obj2->radius = fminf(obj2->radius, Simulator::maxRadius);
+                        obj2->clr.r = (obj1->clr.r + obj2->clr.r) / 2;
+                        obj2->clr.g = (obj1->clr.g + obj2->clr.g) / 2;
+                        obj2->clr.b = (obj1->clr.b + obj2->clr.b) / 2;
 
                         world.erase(next(world.begin(), i));
                     }
@@ -170,8 +185,8 @@ void Simulator::DrawObjects() {
 
         //Celestial Object
         DrawCircle(obj.position.x, obj.position.y, obj.radius, obj.clr);
-        if (obj.clr.a < 50 || (obj.clr.b < 50 && obj.clr.g < 50 && obj.clr.r < 50)){
-            DrawCircleLines(obj.position.x, obj.position.y, obj.radius+0.5f, WHITE);
+        if (obj.clr.a < 150 || (obj.clr.b < 10 && obj.clr.g < 10 && obj.clr.r < 10)){
+            DrawCircleLines(obj.position.x, obj.position.y, obj.radius+0.1f, WHITE);
         }
         
     }
@@ -196,7 +211,7 @@ Object *Simulator::SelectObject(int x, int y){
     for (size_t i = 0; i < world.size(); i++){
         Vector2 mousePos = Vector2{(float)x, (float)y};
         float dist = Vector2Distance(mousePos, world[i].position);
-        if (dist < (world[i].radius + 0.1f)) {
+        if (dist < (world[i].radius + 1.f)) {
             return &world[i];
         }
     }

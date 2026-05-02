@@ -12,12 +12,15 @@ struct Dot{
 
 class Simulator{
     private:
-        int maxObjectCount = 100;
-        float gConstant = 5.f;
 
         bool predictionUpdate = true;
         std::vector<Dot> predictions = {};
     public:
+        static constexpr float maxRadius = 35.f;
+        static constexpr float maxMass = 400000.f;
+        static constexpr int maxObjectCount = 100;
+        static constexpr float gConstant = 5.f;
+        
         std::vector<Object> world = {};
         float timeConstant = 1.f;
         Simulator() {}

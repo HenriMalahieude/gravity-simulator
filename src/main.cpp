@@ -151,7 +151,7 @@ int main(){
                     string anchored = (details->anchored) ? "true" : "false";
                     string invincible = (details->invincible) ? "true" : "false";
 
-                    GuiGroupBox(Rectangle{window_length-200, window_height-200, 200, 200}, "Object Freeze-Frame");
+                    GuiGroupBox(Rectangle{window_length-200, window_height-200, 200, 200}, "Object Details");
                     DrawCircle(window_length - 200 + 40, window_height - 200 + 40, details->radius, details->clr);
 
                     ss << details->mass;
@@ -163,26 +163,31 @@ int main(){
                     string radiusStr = "Radius: " + ss.str();
                     GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 90, 190, 25}, radiusStr.c_str());
                     ss.str(""); ss.clear();
+
+                    ss << details->position.x;
+                    string posStr = "Position: <" + ss.str();
+                    ss.str(""); ss.clear();
+                    ss << details->position.y;
+                    posStr += ", " + ss.str() + ">";
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height -200 + 110, 190, 25}, posStr.c_str());
+                    ss.str(""); ss.clear();
                     
                     ss << details->velocity.x;
-                    string velXStr = "Velocity X: " + ss.str();
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 110, 190, 25}, velXStr.c_str());
+                    string velStr = "Velocity: <" + ss.str();
+                    ss.str(""); ss.clear();
+                    ss << details->velocity.y;
+                    velStr += ", " + ss.str() + ">";
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 150, 190, 25}, velStr.c_str());
                     ss.str(""); ss.clear();
                     
-                    ss << details->velocity.y;
-                    string velYStr = "Velocity Y: " + ss.str();
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 130, 190, 25}, velYStr.c_str());
-                    ss.str(""); ss.clear();
-
                     ss << details->acceleration.x;
-                    string accXStr = "Acceleration X: " + ss.str();
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 150, 190, 25}, accXStr.c_str());
+                    string accStr = "Acceleration X: " + ss.str();
+                    ss.str(""); ss.clear();
+                    ss << details->acceleration.y;
+                    accStr += ", " + ss.str() + ">";
+                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 170, 190, 25}, accStr.c_str());
                     ss.str(""); ss.clear();
 
-                    ss << details->acceleration.y;
-                    string accYStr = "Acceleration Y: " + ss.str();
-                    GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 170, 190, 25}, accYStr.c_str());
-                    ss.str(""); ss.clear();
                     if (details == &nullobj) details = nullptr;
                 }
 
