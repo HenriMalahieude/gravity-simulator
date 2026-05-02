@@ -56,7 +56,6 @@ void WorldTickRoutine(float frameTime, float timeConstant, float gConstant, vect
     }
 }
 
-//NOTE: There is a bug that causes radius collision not to change despite increased radius. Idk why, and I can't be bothered to fix it
 void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
     //Out of Screen Check
     Vector2 extraBounds = Vector2{window_length / 2, window_height / 2};
@@ -68,7 +67,8 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
         bool horizontal_check = obj.position.x < minBounds.x || obj.position.x > maxBounds.x;
         bool vertical_check = obj.position.y < minBounds.y || obj.position.y > maxBounds.y;
 
-        if (horizontal_check || vertical_check){
+        if (horizontal_check || vertical_check 
+            || isnan(it->position.x) || isnan(it->position.y)){
             world.erase(it);
             //Debug_Print("Deleted Planet");
             advance(it, -1); 
@@ -83,18 +83,22 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
     }
 
     //Collision Detection
+    //NOTE: There is a bug that causes radius collision not to change despite increased radius. Idk why, and I can't be bothered to fix it
     for (size_t i = 0; i < world.size(); i++){
         Object *obj1 = &world[i];
-        for (size_t j = 0; j < world.size(); j++){
-            if (i == j) continue;
+        for (size_t j = i+1; j < world.size(); j++){
 
             Object *obj2 = &world[j];
             float dist = Vector2Distance(obj1->position, obj2->position);
             if (dist <= obj1->radius || dist <= obj2->radius){ //They've collided, therefore...
                 if (obj1->invincible){
                     world.erase(next(world.begin(), j));
+                    j--;
+                    continue;
                 }else if (obj2->invincible){
                     world.erase(next(world.begin(), i));
+                    i--;
+                    break;
                 }else{
                     Vector2 momentumObj1 = obj1->velocity * obj1->mass;
                     Vector2 momentumObj2 = obj2->velocity * obj2->mass;
@@ -111,6 +115,7 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
                         obj1->clr.b = (obj1->clr.b + obj2->clr.b) / 2;
 
                         world.erase(next(world.begin(), j));
+                        j--;
                     }else{
                         //Debug_Print("Object 2 with ", obj2->mass, "kg wins");
                         obj2->mass += obj1->mass;
@@ -123,10 +128,10 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
                         obj2->clr.b = (obj1->clr.b + obj2->clr.b) / 2;
 
                         world.erase(next(world.begin(), i));
+                        i--;
+                        break;
                     }
                 }
-
-                i--; j--; //Since we've just reduced the sizing of the worlds array
             }
         }
     }
@@ -145,18 +150,19 @@ void Simulator::Update(float frameTime){
 void Simulator::DrawPredictions(int centerIndex) {
     if (timeConstant > 0.001f || world.size() <= 1) return;
 
-    const int PREDICT_ITER_LIM = 100000;
-    const float TIME_INTERVAL = 1.f/30.f;
+    const int PREDICT_ITER_LIM = 125000;
+    const float TIME_INTERVAL = 1.f/target_fps;
 
     if (predictionUpdate){
         predictionUpdate = false;
         predictions.clear();
 
         vector<Object> predictWorld = world;
-
-        int predictionsPerObject = PREDICT_ITER_LIM / (int)world.size();
+        int timeComplexity = (int)world.size() * log10f((float)world.size());
+        timeComplexity = timeComplexity == 0 ? 1 : timeComplexity;
+        int totalPredictions = PREDICT_ITER_LIM / timeComplexity;
         
-        for (int i = 0; i < predictionsPerObject; i++){
+        for (int i = 0; i < totalPredictions; i++){
             WorldTickRoutine(TIME_INTERVAL, 1.f, gConstant, predictWorld);
             WorldCollisionUpdate(TIME_INTERVAL, predictWorld);
             for (size_t j = 0; j < predictWorld.size(); j++){
@@ -219,7 +225,66 @@ Object *Simulator::SelectObject(int x, int y){
     return nullptr;
 }
 
+void Simulator::ChaosWorld() {
+    predictionUpdate = true;
+    world.clear();
+
+    Vector2 center = Vector2{window_length/2, window_height/2};
+    Object sun = Object{
+        .position = center,
+        .velocity = Vector2{0, 0},
+        .mass = 10000.f,
+        .radius = 20.f,
+        .anchored = true,
+        .invincible = true,
+        .clr = YELLOW
+    };
+    world.push_back(sun);
+
+    float maxSpeed = 30.f;
+    float minSpeed = 10.f;
+    float precision = 100.f;
+    int square = 32;
+
+    for (int i = 0; i < square*square; i++) {
+        float x = (float)(i % (square));
+        float y = (float)(i / (square));
+
+        Vector2 pos = Vector2{(x/square) * window_length-10, (y/square) * window_height-10};
+
+        float dist = Vector2Distance(pos, center);
+        if (dist <= sun.radius*2) continue; //avoid nan
+        if (dist > window_length/2) continue;
+        
+        float scale = 1 - (dist / (window_length/2));
+        Vector2 dir = Vector2Normalize(Vector2Subtract(pos, center));
+        float t = dir.x;
+        dir.x = -1.f * dir.y;
+        dir.y = t; //rotate counter clockwise
+        dir = Vector2Scale(dir, (scale * (maxSpeed-minSpeed) + minSpeed));
+
+        Object ast = Object{
+            .position = pos,
+            .velocity = dir,
+            .mass = 10.f,
+            .radius = 3.f,
+            .clr = GRAY
+        };
+        ast.position += Vector2{5*(((rand() % (int)precision) / precision)-0.5f), 5*(((rand() % (int)precision) / precision)-0.5f)};
+        ast.velocity += Vector2{minSpeed*(((rand() % (int)precision) / precision)-0.5f), minSpeed*(((rand() % (int)precision) / precision)-0.5f)};
+        ast.mass += ((rand() % (int)precision) / precision) - 0.5f;
+        ast.radius += ((rand() % (int)precision) / precision) - 0.5f;
+        ast.clr.r += (((rand() % (int)precision) / precision) * 100) - 50;
+        ast.clr.g += (((rand() % (int)precision) / precision) * 100) - 50;  
+        ast.clr.b += (((rand() % (int)precision) / precision) * 50) - 25;
+
+        world.push_back(ast);
+    }
+}
+
 void Simulator::ResetWorld(){
+    predictionUpdate = true;
+    
     world.clear();
     Object sun = Object{
         .position = Vector2{window_length/2, window_height/2},

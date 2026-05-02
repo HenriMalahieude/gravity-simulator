@@ -1,4 +1,5 @@
 #define RAYGUI_IMPLEMENTATION
+#include <time.h>
 #include <string>
 #include <sstream>
 
@@ -15,18 +16,18 @@ using namespace std;
 int Debug_Scope::context = 0;
 
 int main(){
+    srand(time(NULL));
     InitWindow(window_height, window_length, "Gravity Simulator");
     SetTargetFPS(target_fps);
 
     Simulator sim;
     sim.ResetWorld();
-    //DefaultWorld(sim.world);
 
     Object *details = &sim.world[0];
     stringstream ss; ss.precision(2); ss << fixed;
     bool minimizeDetails = false;
 
-    bool insertingObjects = false;
+    bool insertingObjects = true;
     bool minimizeOptions = false;
 
     bool predictOrNot = true;
@@ -72,8 +73,8 @@ int main(){
             GuiDrawIcon(place_icon, 42, 4, 2, BLACK);
 
             if (sim.timeConstant <= 0.1f){
-                bool reset = GuiButton(Rectangle{4, 42, 32, 32}, "");
-                GuiDrawIcon(ICON_CROSS, 4, 42, 2, BLACK);
+                bool reset = GuiButton(Rectangle{4, 118, 32, 32}, "");
+                GuiDrawIcon(ICON_CROSS, 4, 118, 2, BLACK);
                 if (reset){
                     sim.ClearAll();
                 }
@@ -81,6 +82,27 @@ int main(){
                 GuiToggle(Rectangle{42, 42, 32, 32}, "", &predictOrNot);
                 int predictIcon = predictOrNot ? ICON_EYE_ON : ICON_EYE_OFF;
                 GuiDrawIcon(predictIcon, 42, 42, 2, BLACK);
+
+                bool def = GuiButton(Rectangle{4, 42, 32, 32}, "");
+                GuiDrawIcon(ICON_STAR, 5, 42, 2, BLACK);
+                if (def) {
+                    sim.ResetWorld();
+                }
+
+                bool chaos = GuiButton(Rectangle{4, 80, 32, 32}, "");
+                GuiDrawIcon(ICON_DEMON, 3, 80, 2, BLACK);
+                if (chaos) {
+                    sim.ChaosWorld();
+                }
+            }
+
+            //Time Control
+            bool change = GuiButton(Rectangle{window_length-36, 4, 32, 32}, "");
+            GuiDrawIcon(ICON_CLOCK, window_length-35, 4, 2, BLACK);
+            DrawText((to_string((int)sim.timeConstant) + "x").c_str(), window_length-32, 40, 20, WHITE);
+            if (change) {
+                sim.timeConstant += 1;
+                if (sim.timeConstant > 5.f) sim.timeConstant = 1.f;
             }
 
             if (insertingObjects){ //Inserting Object
@@ -94,7 +116,7 @@ int main(){
                 GuiDrawIcon(minIcon, pos.x, pos.y, 2, BLACK);
 
                 if (!minimizeOptions){
-                    GuiGroupBox(Rectangle{0, window_height-240, 250, 240}, "Object Options");
+                    GuiGroupBox(Rectangle{0, window_height-240, 250, 240}, "Click&Drag to Insert Object");
                     GuiColorPicker(Rectangle{10, window_height-240 + 10, 120, 120}, "Object Color", &addColor);
 
                     ss << addMass;
@@ -114,11 +136,12 @@ int main(){
                 int mX = GetMouseX();
                 int mY = GetMouseY();
 
-                bool buttonLimit1 = mX < 100 && mY < 100; //Limit it so that it cannot accidentally happen when clicking the buttons
+                bool buttonLimit1 = mX < 100 && mY < 170; //Limit it so that it cannot accidentally happen when clicking the buttons
                 bool buttonLimit2 = mX < 250 && mY > (window_height-240) && !minimizeOptions;
                 bool buttonLimit3 = mX < 50 && mY > (window_height-50);
+                bool buttonLimit4 = mX > (window_length-50) && mY < 50;
 
-                if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !buttonLimit1 && !buttonLimit2 && !buttonLimit3){ 
+                if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !buttonLimit1 && !buttonLimit2 && !buttonLimit3 && !buttonLimit4) { 
                     if (!holding) {
                         addPosition = Vector2{(float)mX, (float)mY};
                         holding = true;
@@ -151,7 +174,7 @@ int main(){
                     string anchored = (details->anchored) ? "true" : "false";
                     string invincible = (details->invincible) ? "true" : "false";
 
-                    GuiGroupBox(Rectangle{window_length-200, window_height-200, 200, 200}, "Object Details");
+                    GuiGroupBox(Rectangle{window_length-200, window_height-200, 200, 200}, "Click on Object to See Details");
                     DrawCircle(window_length - 200 + 40, window_height - 200 + 40, details->radius, details->clr);
 
                     ss << details->mass;

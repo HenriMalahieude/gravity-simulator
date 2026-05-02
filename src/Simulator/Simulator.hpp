@@ -16,9 +16,9 @@ class Simulator{
         bool predictionUpdate = true;
         std::vector<Dot> predictions = {};
     public:
-        static constexpr float maxRadius = 35.f;
-        static constexpr float maxMass = 400000.f;
-        static constexpr int maxObjectCount = 100;
+        static constexpr float maxRadius = 30.f;
+        static constexpr float maxMass = 300000.f;
+        static constexpr int maxObjectCount = 1000;
         static constexpr float gConstant = 5.f;
         
         std::vector<Object> world = {};
@@ -30,6 +30,7 @@ class Simulator{
         Object *SelectObject(int x, int y);
         bool AddObject(Object);
         void ResetWorld();
+        void ChaosWorld();
         void ClearAll();
 
         void DrawPredictions(int centerIndex = -1);
