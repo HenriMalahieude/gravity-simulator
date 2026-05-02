@@ -242,9 +242,9 @@ void Simulator::ChaosWorld() {
     world.push_back(sun);
 
     float maxSpeed = 30.f;
-    float minSpeed = 10.f;
+    float minSpeed = 11.f;
     float precision = 100.f;
-    int square = 32;
+    int square = 20;
 
     for (int i = 0; i < square*square; i++) {
         float x = (float)(i % (square));
@@ -254,7 +254,7 @@ void Simulator::ChaosWorld() {
 
         float dist = Vector2Distance(pos, center);
         if (dist <= sun.radius*2) continue; //avoid nan
-        if (dist > window_length/2) continue;
+        if (dist > (window_length/2-50)) continue;
         
         float scale = 1 - (dist / (window_length/2));
         Vector2 dir = Vector2Normalize(Vector2Subtract(pos, center));
