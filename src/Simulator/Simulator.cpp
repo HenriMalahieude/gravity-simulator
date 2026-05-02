@@ -150,7 +150,7 @@ void Simulator::Update(float frameTime){
 void Simulator::DrawPredictions(int centerIndex) {
     if (timeConstant > 0.001f || world.size() <= 1) return;
 
-    const int PREDICT_ITER_LIM = 900000;
+    const int PREDICT_ITER_LIM = 500;
     const float TIME_INTERVAL = 1.f/target_fps;
 
     if (predictionUpdate){
