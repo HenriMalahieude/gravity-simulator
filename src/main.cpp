@@ -165,14 +165,15 @@ int main(){
                 GuiToggle(pos, "", &minimizeDetails);
                 int minIcon = (!minimizeDetails) ? ICON_ARROW_DOWN : ICON_ARROW_UP;
                 GuiDrawIcon(minIcon, pos.x, pos.y, 2, BLACK);
+                details = (selectedObjId == -1) ? Object{} : sim.ObjectInfo(selectedObjId);
+                if (details.id != -1) {
+                    DrawCircleLines(details.position.x, details.position.y, details.radius+2.f, Color{255, 0, 0, 255});
+                    DrawCircleSectorLines(details.position, details.radius+10.f, 0, 360, 6, Color{255, 0, 0, 255});
+                } else {
+                    selectedObjId = -1;
+                }
 
                 if (!minimizeDetails){
-                    details = sim.ObjectInfo(selectedObjId);
-                    if (details.id != -1) {
-                        DrawCircleLines(details.position.x, details.position.y, details.radius+2.f, Color{255, 0, 0, 255});
-                        DrawCircleSectorLines(details.position, details.radius+10.f, 0, 360, 6, Color{255, 0, 0, 255});
-                    }
-
                     string anchored = (details.anchored) ? "true" : "false";
                     string invincible = (details.invincible) ? "true" : "false";
 
@@ -206,7 +207,7 @@ int main(){
                     ss.str(""); ss.clear();
                     
                     ss << details.acceleration.x;
-                    string accStr = "Acceleration X: " + ss.str();
+                    string accStr = "Acceleration: < " + ss.str();
                     ss.str(""); ss.clear();
                     ss << details.acceleration.y;
                     accStr += ", " + ss.str() + ">";
