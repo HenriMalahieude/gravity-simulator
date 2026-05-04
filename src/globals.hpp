@@ -36,4 +36,6 @@ Vector2 operator-(Vector2 lhs, Vector2 rhs);
 
 Vector2 operator+=(Vector2 &lhs, Vector2 rhs);
 
+Color LinearRegress(Color c1, Color c2, float t);
+
 #endif

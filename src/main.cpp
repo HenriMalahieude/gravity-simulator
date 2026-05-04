@@ -23,7 +23,8 @@ int main(){
     Simulator sim;
     sim.ResetWorld();
 
-    Object *details = &sim.world[0];
+    int selectedObjId = -1;
+    Object details = Object{};
     stringstream ss; ss.precision(2); ss << fixed;
     bool minimizeDetails = false;
 
@@ -106,8 +107,6 @@ int main(){
             }
 
             if (insertingObjects){ //Inserting Object
-                details = nullptr;
-
                 Rectangle pos = Rectangle{4, 0, 32, 32};
                 pos.x = (!minimizeOptions) ? 190 : 4;
                 pos.y = (!minimizeOptions) ? (window_height - 240 + 20) : window_height - 36;
@@ -168,50 +167,51 @@ int main(){
                 GuiDrawIcon(minIcon, pos.x, pos.y, 2, BLACK);
 
                 if (!minimizeDetails){
-                    Object nullobj;
-                    if (details == nullptr) details = &nullobj;
+                    details = sim.ObjectInfo(selectedObjId);
+                    if (details.id != -1) {
+                        DrawCircleLines(details.position.x, details.position.y, details.radius+2.f, Color{255, 0, 0, 255});
+                        DrawCircleSectorLines(details.position, details.radius+10.f, 0, 360, 6, Color{255, 0, 0, 255});
+                    }
 
-                    string anchored = (details->anchored) ? "true" : "false";
-                    string invincible = (details->invincible) ? "true" : "false";
+                    string anchored = (details.anchored) ? "true" : "false";
+                    string invincible = (details.invincible) ? "true" : "false";
 
                     GuiGroupBox(Rectangle{window_length-200, window_height-200, 200, 200}, "Click on Object to See Details");
-                    DrawCircle(window_length - 200 + 40, window_height - 200 + 40, details->radius, details->clr);
+                    DrawCircle(window_length - 200 + 40, window_height - 200 + 40, details.radius, details.clr);
 
-                    ss << details->mass;
+                    ss << details.mass;
                     string massStr = "Mass: " + ss.str();
                     GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 70, 190, 25}, massStr.c_str());
                     ss.str(""); ss.clear();
                     
-                    ss << details->radius;
+                    ss << details.radius;
                     string radiusStr = "Radius: " + ss.str();
                     GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 90, 190, 25}, radiusStr.c_str());
                     ss.str(""); ss.clear();
 
-                    ss << details->position.x;
+                    ss << details.position.x;
                     string posStr = "Position: <" + ss.str();
                     ss.str(""); ss.clear();
-                    ss << details->position.y;
+                    ss << details.position.y;
                     posStr += ", " + ss.str() + ">";
                     GuiLabel(Rectangle{window_length - 200 + 10, window_height -200 + 110, 190, 25}, posStr.c_str());
                     ss.str(""); ss.clear();
                     
-                    ss << details->velocity.x;
+                    ss << details.velocity.x;
                     string velStr = "Velocity: <" + ss.str();
                     ss.str(""); ss.clear();
-                    ss << details->velocity.y;
+                    ss << details.velocity.y;
                     velStr += ", " + ss.str() + ">";
                     GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 150, 190, 25}, velStr.c_str());
                     ss.str(""); ss.clear();
                     
-                    ss << details->acceleration.x;
+                    ss << details.acceleration.x;
                     string accStr = "Acceleration X: " + ss.str();
                     ss.str(""); ss.clear();
-                    ss << details->acceleration.y;
+                    ss << details.acceleration.y;
                     accStr += ", " + ss.str() + ">";
                     GuiLabel(Rectangle{window_length - 200 + 10, window_height - 200 + 170, 190, 25}, accStr.c_str());
                     ss.str(""); ss.clear();
-
-                    if (details == &nullobj) details = nullptr;
                 }
 
                 int mX = GetMouseX();
@@ -219,9 +219,10 @@ int main(){
 
                 bool buttonLimit1 = mX < 100 && mY < 100; //Limit it so that it cannot accidentally happen when clicking the buttons
                 bool buttonLimit3 = mX > pos.x && mY > pos.y;
+                bool buttonLimit4 = mX > (window_length-50) && mY < 50;
 
-                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !buttonLimit1 && !buttonLimit3) {
-                    details = sim.SelectObject(mX, mY);
+                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !buttonLimit1 && !buttonLimit3 && !buttonLimit4) {
+                    selectedObjId = sim.SelectObject(mX, mY);
                 }
             }
 
@@ -267,4 +268,13 @@ Vector2 operator-(Vector2 lhs, Vector2 rhs){
 Vector2 operator+=(Vector2 &lhs, Vector2 rhs){
     lhs = lhs + rhs;
     return lhs;
+}
+
+Color LinearRegress(Color c1, Color c2, float t){
+    return Color{
+        (unsigned char)((1-t)*(float)c1.r + t*(float)c2.r),
+        (unsigned char)((1-t)*(float)c1.g + t*(float)c2.g),
+        (unsigned char)((1-t)*(float)c1.b + t*(float)c2.b),
+        c1.a
+    };
 }

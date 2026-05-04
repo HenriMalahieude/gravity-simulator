@@ -75,7 +75,7 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
         }
 
         if (it->mass >= Simulator::maxMass*0.75f && it->radius >= Simulator::maxRadius*0.75f){
-            it->radius = 15.f;
+            it->radius = Simulator::maxRadius/3.f;
             it->mass = Simulator::maxMass;
             it->invincible = true;
             it->clr = BLACK;
@@ -110,9 +110,7 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
                         obj1->velocity = (momentumObj1 + momentumObj2) / obj1->mass;
                         obj1->radius *= (1.f + (0.5f * (obj2->mass / obj1->mass)));
                         obj1->radius = fminf(obj1->radius, Simulator::maxRadius);
-                        obj1->clr.r = (obj1->clr.r + obj2->clr.r) / 2;
-                        obj1->clr.g = (obj1->clr.g + obj2->clr.g) / 2;
-                        obj1->clr.b = (obj1->clr.b + obj2->clr.b) / 2;
+                        obj1->clr = LinearRegress(obj1->clr, obj2->clr, obj2->mass / obj1->mass);
 
                         world.erase(next(world.begin(), j));
                         j--;
@@ -123,9 +121,7 @@ void WorldCollisionUpdate(float frameTime, vector<Object> &world) {
                         obj2->velocity = (momentumObj1 + momentumObj2) / obj2->mass;
                         obj2->radius *= (1.f + (0.5f * (obj1->mass / obj2->mass)));
                         obj2->radius = fminf(obj2->radius, Simulator::maxRadius);
-                        obj2->clr.r = (obj1->clr.r + obj2->clr.r) / 2;
-                        obj2->clr.g = (obj1->clr.g + obj2->clr.g) / 2;
-                        obj2->clr.b = (obj1->clr.b + obj2->clr.b) / 2;
+                        obj2->clr = LinearRegress(obj2->clr, obj1->clr, obj1->mass / obj2->mass);
 
                         world.erase(next(world.begin(), i));
                         i--;
@@ -150,12 +146,13 @@ void Simulator::Update(float frameTime){
 void Simulator::DrawPredictions(int centerIndex) {
     if (timeConstant > 0.001f || world.size() <= 1) return;
 
-    const int PREDICT_ITER_LIM = 75000;
-    const float TIME_INTERVAL = 1.f/target_fps;
+    const int PREDICT_ITER_LIM = 150000;
+    const float TIME_INTERVAL = 1.f/(target_fps/2.f);
 
     if (predictionUpdate){
         predictionUpdate = false;
-        predictions.clear();
+        ImageClearBackground(&predictionImage, Color{0, 0, 0, 0});
+        //predictions.clear();
 
         vector<Object> predictWorld = world;
         int timeComplexity = (int)world.size() * log10f((float)world.size());
@@ -166,15 +163,24 @@ void Simulator::DrawPredictions(int centerIndex) {
             WorldTickRoutine(TIME_INTERVAL, 1.f, gConstant, predictWorld);
             WorldCollisionUpdate(TIME_INTERVAL, predictWorld);
             for (size_t j = 0; j < predictWorld.size(); j++){
-                predictions.push_back(Dot{predictWorld[j].clr, predictWorld[j].position});
+                //predictions.push_back(Dot{predictWorld[j].clr, predictWorld[j].position});
+                Color lclClr = predictWorld[j].clr;
+                if (lclClr.a < 150 || (lclClr.b < 15 && lclClr.g < 15 && lclClr.r < 15)){
+                    lclClr = WHITE; //for black holes
+                }
+                ImageDrawPixel(&predictionImage, predictWorld[j].position.x, predictWorld[j].position.y, lclClr);
             }
         }
+
+        UnloadTexture(predictionTexture);
+        predictionTexture = LoadTextureFromImage(predictionImage);
     }
 
-    for (size_t i = 0; i < predictions.size(); i++){
+    /*for (size_t i = 0; i < predictions.size(); i++){
         Dot dd = predictions[i];
         DrawPixel(dd.position.x, dd.position.y, dd.cc);
-    }
+    } */
+    DrawTexture(predictionTexture, 0, 0, WHITE);
 }
 
 void Simulator::DrawObjects() {
@@ -192,7 +198,7 @@ void Simulator::DrawObjects() {
         //Celestial Object
         DrawCircle(obj.position.x, obj.position.y, obj.radius, obj.clr);
         if (obj.clr.a < 150 || (obj.clr.b < 10 && obj.clr.g < 10 && obj.clr.r < 10)){
-            DrawCircleLines(obj.position.x, obj.position.y, obj.radius+0.1f, WHITE);
+            DrawCircleLines(obj.position.x, obj.position.y, obj.radius+0.2f, WHITE);
         }
         
     }
@@ -203,6 +209,8 @@ bool Simulator::AddObject(Object obj) {
 
     predictionUpdate = true;
 
+    obj.id = nextID;
+    nextID++;
     world.push_back(obj);
     return true;
 }
@@ -213,16 +221,16 @@ void Simulator::ClearAll(){
     world.clear();
 }
 
-Object *Simulator::SelectObject(int x, int y){
+int Simulator::SelectObject(int x, int y){
     for (size_t i = 0; i < world.size(); i++){
         Vector2 mousePos = Vector2{(float)x, (float)y};
         float dist = Vector2Distance(mousePos, world[i].position);
         if (dist < (world[i].radius + 1.f)) {
-            return &world[i];
+            return world[i].id;
         }
     }
 
-    return nullptr;
+    return -1;
 }
 
 void Simulator::ChaosWorld() {
@@ -239,12 +247,16 @@ void Simulator::ChaosWorld() {
         .invincible = true,
         .clr = YELLOW
     };
-    world.push_back(sun);
+    AddObject(sun);
 
-    float maxSpeed = 30.f;
-    float minSpeed = 11.f;
+    float minSpeed = 10.f;
+    float maxSpeed = 32.f;
+    float maxOffset = 15.f; //position offset, in pixels
+    float maxMass= 30.f;
+    float maxRadius = 4.f;
+    
     float precision = 100.f;
-    int square = 20;
+    int square = 23;
 
     for (int i = 0; i < square*square; i++) {
         float x = (float)(i % (square));
@@ -266,19 +278,35 @@ void Simulator::ChaosWorld() {
         Object ast = Object{
             .position = pos,
             .velocity = dir,
-            .mass = 10.f,
-            .radius = 3.f,
+            .mass = 1.f,
+            .radius = 1.f,
             .clr = GRAY
         };
-        ast.position += Vector2{5*(((rand() % (int)precision) / precision)-0.5f), 5*(((rand() % (int)precision) / precision)-0.5f)};
-        ast.velocity += Vector2{minSpeed*(((rand() % (int)precision) / precision)-0.5f), minSpeed*(((rand() % (int)precision) / precision)-0.5f)};
-        ast.mass += ((rand() % (int)precision) / precision) - 0.5f;
-        ast.radius += ((rand() % (int)precision) / precision) - 0.5f;
+        
+        ast.position += Vector2{
+            maxOffset*(((rand() % (int)precision) / precision)-0.5f), 
+            maxOffset*(((rand() % (int)precision) / precision)-0.5f)
+        };
+        
+        ast.velocity += Vector2{
+            minSpeed*(((rand() % (int)precision) / precision)-0.5f), 
+            minSpeed*(((rand() % (int)precision) / precision)-0.5f)
+        };
+
+        if (rand() % 10 == 0) { //invert their direction
+            ast.velocity.x *= -1.f;
+            ast.velocity.y *= -1.f;
+        }
+        
+        ast.mass += maxMass*(((rand() % (int)precision) / precision));
+        
+        ast.radius += maxRadius*(((rand() % (int)precision) / precision));
+        
         ast.clr.r += (((rand() % (int)precision) / precision) * 100) - 50;
         ast.clr.g += (((rand() % (int)precision) / precision) * 100) - 50;  
-        ast.clr.b += (((rand() % (int)precision) / precision) * 50) - 25;
+        ast.clr.b += (((rand() % (int)precision) / precision) * 100) - 50;
 
-        world.push_back(ast);
+        AddObject(ast);
     }
 }
 
@@ -313,7 +341,7 @@ void Simulator::ResetWorld(){
         .invincible = false,
         .clr = GRAY
     };
-    world.push_back(sun);
-    world.push_back(planet);
-    world.push_back(moon);
+    AddObject(sun);
+    AddObject(planet);
+    AddObject(moon);
 }

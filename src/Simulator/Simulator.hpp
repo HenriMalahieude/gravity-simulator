@@ -12,9 +12,11 @@ struct Dot{
 
 class Simulator{
     private:
-
+        Image predictionImage;
+        Texture2D predictionTexture;
         bool predictionUpdate = true;
-        std::vector<Dot> predictions = {};
+        int nextID = 1;
+        //std::vector<Dot> predictions = {};
     public:
         static constexpr float maxRadius = 30.f;
         static constexpr float maxMass = 300000.f;
@@ -23,11 +25,21 @@ class Simulator{
         
         std::vector<Object> world = {};
         float timeConstant = 1.f;
-        Simulator() {}
+        Simulator() {
+            predictionImage = GenImageColor(window_length, window_height, Color{0, 0, 0, 0});
+            predictionTexture = LoadTextureFromImage(predictionImage);
+        }
 
         void Update(float frameTime);
 
-        Object *SelectObject(int x, int y);
+        int SelectObject(int x, int y);
+        Object ObjectInfo(int id){
+            for (size_t i = 0; i < world.size(); i++){
+                if (world[i].id == id) return world[i];
+            }
+
+            return Object{};
+        }
         bool AddObject(Object);
         void ResetWorld();
         void ChaosWorld();
