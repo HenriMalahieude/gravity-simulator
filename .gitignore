@@ -5,6 +5,7 @@
 _build/*.wasm
 _build/*.html
 _build/*.js
+_build/include/*.h
 
 #Options
 .vscode
